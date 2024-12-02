@@ -54,15 +54,12 @@ async def download_file(filename: str):
         filename=filename
     )
 
-@app.get("/list-files", response_model=List[str], summary="List available zip files")
+@app.get("/list-files", response_model=List[str], summary="List available files")
 async def list_files():
-    return [f for f in os.listdir(UPLOAD_DIRECTORY) if f.endswith('.zip')]
+    return os.listdir(UPLOAD_DIRECTORY)
 
-@app.post("/upload", summary="Upload a zip file")
+@app.post("/upload", summary="Upload a file")
 async def upload_file(file: UploadFile = File(...)):
-    if not file.filename.endswith('.zip'):
-        raise HTTPException(status_code=400, detail="Only .zip files are allowed")
-
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIRECTORY, unique_filename)
 
