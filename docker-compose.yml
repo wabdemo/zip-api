@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  file-transfer-api:
+    build: .
+    ports:
+      - "80:8000"
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped

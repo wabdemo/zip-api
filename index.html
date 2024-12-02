@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Transfer API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white shadow-md rounded-lg p-6">
+      <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">File Transfer</h1>
+
+      <!-- File Upload Section -->
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Upload Zip File</h2>
+        <input
+          type="file"
+          id="fileInput"
+          accept=".zip"
+          class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        />
+        <button
+          id="uploadButton"
+          class="mt-4 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition duration-300"
+        >
+          Upload
+        </button>
+        <p id="uploadStatus" class="mt-2 text-center text-sm"></p>
+      </div>
+
+      <!-- File List Section -->
+      <div>
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Available Files</h2>
+        <ul id="fileList" class="space-y-2">
+          <!-- Files will be dynamically populated here -->
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const uploadButton = document.getElementById("uploadButton");
+      const uploadStatus = document.getElementById("uploadStatus");
+      const fileList = document.getElementById("fileList");
+
+      // Fetch and display available files
+      async function loadFiles() {
+        try {
+          const response = await fetch("/list-files");
+          const files = await response.json();
+
+          fileList.innerHTML = files.length
+            ? files
+                .map(
+                  (file) => `
+                        <li class="flex justify-between items-center bg-gray-50 p-2 rounded">
+                            <span class="truncate">${file}</span>
+                            <button
+                                onclick="downloadFile('${file}')"
+                                class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                            >
+                                Download
+                            </button>
+                        </li>
+                    `
+                )
+                .join("")
+            : '<li class="text-center text-gray-500">No files available</li>';
+        } catch (error) {
+          fileList.innerHTML = '<li class="text-center text-red-500">Error loading files</li>';
+        }
+      }
+
+      // Upload file
+      uploadButton.addEventListener("click", async () => {
+        const file = fileInput.files[0];
+        if (!file) {
+          uploadStatus.textContent = "Please select a file";
+          uploadStatus.className = "mt-2 text-center text-red-500";
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          uploadStatus.textContent = "Uploading...";
+          uploadStatus.className = "mt-2 text-center text-blue-500";
+
+          const response = await fetch("/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            uploadStatus.textContent = `File uploaded: ${result.filename}`;
+            uploadStatus.className = "mt-2 text-center text-green-500";
+            fileInput.value = ""; // Clear input
+            loadFiles(); // Refresh file list
+          } else {
+            throw new Error(result.detail || "Upload failed");
+          }
+        } catch (error) {
+          uploadStatus.textContent = error.message;
+          uploadStatus.className = "mt-2 text-center text-red-500";
+        }
+      });
+
+      // Download file
+      async function downloadFile(filename) {
+        try {
+          const response = await fetch(`/download/${filename}`);
+
+          if (!response.ok) {
+            throw new Error("Download failed");
+          }
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.style.display = "none";
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          alert("Error downloading file");
+        }
+      }
+
+      // Load files on page load
+      loadFiles();
+    </script>
+  </body>
+</html>

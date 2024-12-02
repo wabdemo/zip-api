@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "zip-api"
+version = "0.1.0"
+description = ""
+authors = ["Almaz <177681917+daxmonad@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "0.109.0"
+uvicorn = "0.24.0"
+python-multipart = "0.0.9"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
