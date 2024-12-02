@@ -19,6 +19,15 @@
           accept=".zip"
           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
+
+        <!-- Progress Bar Container -->
+        <div id="progressContainer" class="mt-4 hidden">
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+          </div>
+          <div id="progressText" class="text-center text-sm mt-2"></div>
+        </div>
+
         <button
           id="uploadButton"
           class="mt-4 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition duration-300"
@@ -42,6 +51,9 @@
       const uploadButton = document.getElementById("uploadButton");
       const uploadStatus = document.getElementById("uploadStatus");
       const fileList = document.getElementById("fileList");
+      const progressContainer = document.getElementById("progressContainer");
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
 
       // Fetch and display available files
       async function loadFiles() {
@@ -84,25 +96,50 @@
         formData.append("file", file);
 
         try {
-          uploadStatus.textContent = "Uploading...";
-          uploadStatus.className = "mt-2 text-center text-blue-500";
+          // Reset and show progress container
+          progressContainer.classList.remove("hidden");
+          progressBar.style.width = "0%";
+          progressText.textContent = "Uploading...";
+          uploadStatus.textContent = "";
 
-          const response = await fetch("/upload", {
-            method: "POST",
-            body: formData,
-          });
+          // Create XMLHttpRequest for progress tracking
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", "/upload", true);
 
-          const result = await response.json();
+          // Progress event
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = (event.loaded / event.total) * 100;
+              progressBar.style.width = `${percentComplete}%`;
+              progressText.textContent = `${Math.round(percentComplete)}% uploaded`;
+            }
+          };
 
-          if (response.ok) {
-            uploadStatus.textContent = `File uploaded: ${result.filename}`;
-            uploadStatus.className = "mt-2 text-center text-green-500";
-            fileInput.value = ""; // Clear input
-            loadFiles(); // Refresh file list
-          } else {
-            throw new Error(result.detail || "Upload failed");
-          }
+          // Success handler
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              const result = JSON.parse(xhr.responseText);
+              progressText.textContent = `Upload complete: ${result.filename}`;
+              uploadStatus.textContent = `File uploaded successfully`;
+              uploadStatus.className = "mt-2 text-center text-green-500";
+              fileInput.value = ""; // Clear input
+              loadFiles(); // Refresh file list
+            } else {
+              throw new Error("Upload failed");
+            }
+          };
+
+          // Error handler
+          xhr.onerror = () => {
+            progressContainer.classList.add("hidden");
+            uploadStatus.textContent = "Upload failed";
+            uploadStatus.className = "mt-2 text-center text-red-500";
+          };
+
+          // Send the request
+          xhr.send(formData);
         } catch (error) {
+          progressContainer.classList.add("hidden");
           uploadStatus.textContent = error.message;
           uploadStatus.className = "mt-2 text-center text-red-500";
         }
